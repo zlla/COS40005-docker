@@ -1,0 +1,61 @@
+services:
+  mssql-db:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    container_name: mssql-db
+    environment:
+      - SA_PASSWORD=2003@Abcz32
+      - ACCEPT_EULA=Y
+    ports:
+      - "1434:1433"
+    networks:
+      - app-network
+    volumes:
+      - /var/mssql-data:/var/opt/mssql
+
+  webapi:
+    # image: nnguyenhoangann/cos40005-web-api:latest
+    build: 
+      context: ./Server
+      dockerfile: Dockerfile
+    container_name: webapi
+    ports:
+      - "8000:80"
+      - "8001:443"
+    networks:
+      - app-network
+    depends_on:
+      - mssql-db
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mssql-db;Database=COS40005;User Id=SA;Password=2003@Abcz32;TrustServerCertificate=True;
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=2003@Abcz32
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://webapi:80/api/auth/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  flask-app:
+    # image: nnguyenhoangann/cos40005-fall-detection-web-service:latest
+    build:
+      context: ./fall_detection_web_service
+      dockerfile: Dockerfile
+    container_name: flask-app
+    ports:
+      - "8002:8080"
+    depends_on:
+      webapi:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - WEBAPI_URL=wss://webapi:443/api/fail-detection-hub
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mssql-data:
