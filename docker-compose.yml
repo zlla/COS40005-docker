@@ -10,7 +10,8 @@ services:
     networks:
       - app-network
     volumes:
-      - /var/mssql-data:/var/opt/mssql
+      - /var/mssql-data:/var/opt/mssql # Comment this line for Windows user
+      # - mssql-data:/var/opt/mssql # Comment this line for MacOS user
     healthcheck:
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "2003@Abcz32", "-C", "-Q", "'SELECT 1'"]
       interval: 30s
@@ -19,13 +20,12 @@ services:
       start_period: 30s
 
   webapi:
-    # image: nnguyenhoangann/cos40005-web-api:latest
-    build:
-      context: ./Server
-      dockerfile: Dockerfile
+    image: nnguyenhoangann/cos40005-web-api:latest
+    # build:
+    #   context: ./Server
+    #   dockerfile: Dockerfile
     container_name: webapi
     ports:
-      - "8000:80"
       - "8001:443"
     networks:
       - app-network
@@ -45,10 +45,10 @@ services:
       start_period: 30s
 
   flask-app:
-    # image: nnguyenhoangann/cos40005-fall-detection-web-service:latest
-    build:
-      context: ./fall_detection_web_service
-      dockerfile: Dockerfile
+    image: nnguyenhoangann/cos40005-fall-detection-web-service:latest
+    # build:
+    #   context: ./fall_detection_web_service
+    #   dockerfile: Dockerfile
     container_name: flask-app
     ports:
       - "8002:8080"
@@ -58,7 +58,22 @@ services:
     networks:
       - app-network
     environment:
-      - WEBAPI_URL=wss://webapi:443/api/fail-detection-hub
+      - WEB_API_URL=wss://webapi:443/api/fail-detection-hub
+
+  # react-frontend:
+  #   build:
+  #     context: ./Client
+  #     dockerfile: Dockerfile
+  #   container_name: react-frontend
+  #   ports:
+  #     - "8000:80"
+  #   networks:
+  #     - app-network
+  #   depends_on:
+  #     webapi:
+  #       condition: service_healthy
+  #   environment:
+  #     - VITE_API_URL=https://webapi:443/api
 
 networks:
   app-network:
